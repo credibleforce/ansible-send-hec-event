@@ -1,0 +1,48 @@
+---
+
+- name: Simple Playbook
+  gather_facts: True
+  hosts: all
+  tasks:
+    - name: Set results fact
+      set_fact:
+        splunk_event: "{{ { 'sourcetype': '_json', 'event':[] } }}"
+        splunk_hec_server: 'https://SPLUNK_SERVER:8088/services/collector/event'
+        splunk_hec_token: 'SPLUNK_TOKEN'
+
+    - name: Display hello world
+      debug:
+        msg: "Hello world!"
+
+
+    - name: Populate JSON
+      set_fact:
+        splunk_event: "{{ { 'sourcetype': '_json', 'event': splunk_event.event + [ item ] } }}"
+      with_items: 
+        - "{{ { 'UserID': 'one',
+                'UserType': 'TBD',
+                'UserName': 'TBD' 
+            } }}"
+        - "{{ { 'UserID': 'two', 
+                'UserType': 'TBD', 
+                'UserName': 'TBD' 
+            } }}"
+
+    - name: Output dictionary
+      debug:
+        msg:
+          - "{{ splunk_event }}"
+
+
+    - name: Send to splunk
+      uri:
+        url: "{{ splunk_hec_server }}"
+        method: 'POST'
+        body_format: json
+        status_code: [200, 202]
+        return_content: true
+        headers:
+          Content-Type: application/json
+          Authorization: "Splunk {{ splunk_hec_token }}"
+        body: "{{ splunk_event }}"
+        validate_certs: no
